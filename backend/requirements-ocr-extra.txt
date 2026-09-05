@@ -1,0 +1,4 @@
+# Optional fallback OCR engine. Core text-PDF support does not need this.
+# EasyOCR downloads its language model on first use.
+easyocr>=1.7
+numpy>=1.26
