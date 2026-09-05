@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Educational lab-report explainer with PDF/image text extraction and plain-language summaries.">
+  <title>Report Reader — Medical Report Explainer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <svg class="pulse" viewBox="0 0 1200 60" preserveAspectRatio="none" aria-hidden="true">
+    <polyline points="0,30 140,30 165,10 190,50 215,30 980,30 1005,12 1030,48 1055,30 1200,30"></polyline>
+  </svg>
+  <div class="topbar-inner">
+    <div>
+      <div class="brand"><span class="brand-mark">＋</span><span class="brand-name">Report Reader</span></div>
+      <p class="brand-tagline">Lab values explained in plain language — educational, not diagnostic.</p>
+    </div>
+    <div id="api-badge" class="api-badge checking"><span class="status-dot"></span><span>Checking server…</span></div>
+  </div>
+</header>
+
+<main class="shell">
+  <section class="intro-grid">
+    <div>
+      <p class="eyebrow">AI / NLP PORTFOLIO PROJECT</p>
+      <h1>Understand the structure of a lab report.</h1>
+      <p class="lead">Upload a text-based PDF or an image. The app extracts supported lab values, compares them with demonstration reference intervals, stores the analysis locally, and lets you ask report-aware questions.</p>
+    </div>
+    <div class="privacy-card">
+      <strong>Privacy-first local demo</strong>
+      <span>Raw uploads are deleted after processing by default. Parsed results are stored in local SQLite for report history.</span>
+    </div>
+  </section>
+
+  <section class="panel" id="upload-panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">STEP 1</p>
+        <h2>Upload a lab report</h2>
+        <p class="muted">PDF, PNG, JPG, JPEG, BMP, or TIFF · maximum 10 MB.</p>
+      </div>
+      <button class="secondary-btn" id="demo-btn" type="button">Try sample report</button>
+    </div>
+
+    <label id="dropzone" for="file-input" tabindex="0">
+      <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png,.bmp,.tiff" hidden>
+      <div class="dz-content">
+        <span class="dz-icon">↑</span>
+        <span class="dz-title">Drop a report here, or click to browse</span>
+        <span class="dz-sub">Text PDFs work immediately. Scans/images need Tesseract or optional EasyOCR.</span>
+      </div>
+    </label>
+    <div class="upload-meta">
+      <div id="upload-status" class="status" role="status" aria-live="polite">Ready for a report.</div>
+      <div id="ocr-status" class="capability-note">Checking OCR capability…</div>
+    </div>
+  </section>
+
+  <section class="panel hidden" id="results-panel">
+    <div class="results-head">
+      <div>
+        <p class="eyebrow">STEP 2 · EXPLANATION</p>
+        <h2 id="report-name">Your results</h2>
+        <p id="report-overview" class="muted"></p>
+      </div>
+      <div class="score-dial" id="score-dial" aria-label="Detected values in-range score">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="dial-track" cx="60" cy="60" r="52"></circle>
+          <circle class="dial-fill" id="dial-fill" cx="60" cy="60" r="52"></circle>
+        </svg>
+        <div class="dial-label"><span id="score-value">--</span><span class="dial-caption">values<br>in range</span></div>
+      </div>
+    </div>
+
+    <div class="reference-banner">The ranges below are demonstration ranges built into the project. Always prioritize the reference interval printed by the laboratory that produced the report.</div>
+
+    <div class="table-wrap">
+      <table class="lab-table" id="lab-table">
+        <thead><tr><th>Parameter</th><th>Detected value</th><th>Demo interval</th><th>Flag</th></tr></thead>
+        <tbody id="lab-table-body"></tbody>
+      </table>
+    </div>
+
+    <div id="explanations" class="explanations"></div>
+    <div id="risks-block" class="hidden">
+      <h3>Educational notes for flagged values</h3>
+      <div id="risks-list" class="risks-list"></div>
+    </div>
+    <p class="disclaimer" id="disclaimer-text"></p>
+  </section>
+
+  <section class="panel hidden" id="chat-panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">STEP 3 · REPORT-AWARE Q&A</p>
+        <h2>Ask about the selected report</h2>
+        <p class="muted">The chatbot uses the parsed values from the report you just opened.</p>
+      </div>
+    </div>
+    <div class="quick-prompts" id="quick-prompts">
+      <button type="button" data-question="Summarize my report">Summarize my report</button>
+      <button type="button" data-question="Which values are abnormal?">Which values are abnormal?</button>
+      <button type="button" data-question="Why is my glucose high?">Why is my glucose high?</button>
+      <button type="button" data-question="What does HDL mean?">What does HDL mean?</button>
+    </div>
+    <div id="chat-log" class="chat-log" aria-live="polite"></div>
+    <form id="chat-form" class="chat-form">
+      <input type="text" id="chat-input" maxlength="1000" placeholder="Ask about a detected parameter…" autocomplete="off">
+      <button type="submit">Ask</button>
+    </form>
+  </section>
+
+  <section class="panel" id="dashboard-panel">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">LOCAL HISTORY</p>
+        <h2>Report history</h2>
+        <p class="muted">Saved parsed results from this local SQLite database.</p>
+      </div>
+      <button class="danger-link" id="clear-history-btn" type="button">Clear history</button>
+    </div>
+    <div id="dashboard-empty" class="empty-state">No reports saved yet. Upload a report or try the sample report.</div>
+    <div id="dashboard-content" class="hidden">
+      <div class="chart-card">
+        <div class="chart-title"><span>Detected values in-range score</span><span id="report-count"></span></div>
+        <canvas id="trend-chart" height="170" aria-label="Report score trend"></canvas>
+      </div>
+      <div id="report-history" class="history-list"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <p>Educational software only. It does not diagnose conditions, recommend treatment, or replace professional medical care.</p>
+</footer>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
